@@ -45,11 +45,11 @@ def processClip(clip, game):
             # move clip and title as starting clip
             copyfile(clipFilepath, combinedFilepath)
         else:
-            print(f'\tAppending to {date}.mp4')
+            print(f'\tAppending to {date}.mp4, this could take a while...')
             combined = VideoFileClip(combinedFilepath)
             clipToCombine = VideoFileClip(clipFilepath)
             combinedClips = concatenate_videoclips([combined, clipToCombine])
-            combinedClips.write_videofile(combinedFilepathTemp, verbose=False, logger=False)
+            combinedClips.write_videofile(combinedFilepathTemp, verbose=False, logger=None)
             move(combinedFilepathTemp, combinedFilepath)
         move(clipFilepath, f'{processedFolder}/{clip}')
         print(f'\tDone processing clip')
