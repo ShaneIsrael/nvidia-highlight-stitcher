@@ -58,9 +58,8 @@ def processClip(clip, game):
 def main():
     print('Starting Highlight Stitcher')
     setupFolders()
-    game = getGameDirectories()[1]
-    clips = getGameClips(game)
     for game in getGameDirectories():
+        clips = getGameClips(game)
         print(f'Creating combined highlights for: {game}')
         print(f'\tFound {len(clips)} clip(s) to process...')
         for clip in clips:
