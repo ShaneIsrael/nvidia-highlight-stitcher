@@ -1,1 +1,3 @@
 moviepy
+watchdog
+filelock

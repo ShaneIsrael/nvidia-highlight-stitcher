@@ -1,8 +1,13 @@
 import os
 import re
+import time
 import config
+from lock import lock
 from shutil import copyfile, move
 from moviepy.editor import VideoFileClip, concatenate_videoclips
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler
+
 
 def parseDateFromGameClip(clip):
     match = re.search('[0-9]{4}\.(0[1-9]|1[0-2])\.(0[1-9]|[1-2][0-9]|3[0-1])', clip) 
@@ -49,22 +54,55 @@ def processClip(clip, game):
             combined = VideoFileClip(combinedFilepath)
             clipToCombine = VideoFileClip(clipFilepath)
             combinedClips = concatenate_videoclips([combined, clipToCombine])
-            combinedClips.write_videofile(combinedFilepathTemp, verbose=False, logger=None)
+            combinedClips.write_videofile(combinedFilepathTemp, verbose=False)
             move(combinedFilepathTemp, combinedFilepath)
         move(clipFilepath, f'{processedFolder}/{clip}')
         print(f'\tDone processing clip')
 
-
-def main():
-    print('Starting Highlight Stitcher')
-    setupFolders()
+def checkAndProcess():
     for game in getGameDirectories():
         clips = getGameClips(game)
         print(f'Creating combined highlights for: {game}')
         print(f'\tFound {len(clips)} clip(s) to process...')
         for clip in clips:
             processClip(clip, game)
-        # print(parseDateFromGameClip(clips[0]))
-    print('All clips have been processed.')
+
+def onCreated(event):
+    print('--- New Clip Detected!')
+    checkAndProcess()
+def onMoved(event):
+    print('--- New Clip Detected!')
+    checkAndProcess()
+
+def initializeObserver():
+    # Watcher
+    patterns = ["*.mp4"]
+    ignorePatterns = ["*/combined/*", "*/processed/*"]
+    ignoreDirectories = True
+    caseSensitive = True
+    myEventHandler = PatternMatchingEventHandler(patterns, ignorePatterns, ignoreDirectories, caseSensitive)
+    myEventHandler.on_created = onCreated
+    myEventHandler.on_moved = onMoved
+
+
+    path = config.highlights_root
+    myObserver = Observer()
+    myObserver.schedule(myEventHandler, path, recursive=True)
+
+    myObserver.start()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        myObserver.stop()
+        myObserver.join()
+
+def main():
+    lock()
+    print('Starting Highlight Stitcher')
+    setupFolders()
+    checkAndProcess()
+    print('All existing clips have been processed, watching directory for new clips...')
+    initializeObserver()
 
 main()
