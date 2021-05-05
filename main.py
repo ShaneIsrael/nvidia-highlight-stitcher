@@ -54,7 +54,7 @@ def processClip(clip, game):
             combined = VideoFileClip(combinedFilepath)
             clipToCombine = VideoFileClip(clipFilepath)
             combinedClips = concatenate_videoclips([combined, clipToCombine])
-            combinedClips.write_videofile(combinedFilepathTemp, verbose=False)
+            combinedClips.write_videofile(combinedFilepathTemp, verbose=False, codec='rawvideo')
             move(combinedFilepathTemp, combinedFilepath)
         move(clipFilepath, f'{processedFolder}/{clip}')
         print(f'\tDone processing clip')
@@ -102,7 +102,8 @@ def main():
     print('Starting Highlight Stitcher')
     setupFolders()
     checkAndProcess()
-    print('All existing clips have been processed, watching directory for new clips...')
-    initializeObserver()
+    print('All existing clips have been processed')
+    # Watching directory may massively drop fps while in game
+    #initializeObserver() 
 
 main()
