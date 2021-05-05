@@ -72,7 +72,7 @@ def processClips(clips, game, date):
         clipVideo = ffmpeg.input(clipFilepath)
         v = clipVideo.video
         concat.append(v)
-    joined = ffmpeg.concat(concat, v=1, a=1).node
+    joined = ffmpeg.concat(*concat, v=1, a=1).node
     out = ffmpeg.output(joined[0], joined[1], f'{config.highlights_root}/{game}/combined/{date}.mp4')
     out.run()
     # move clips to process folder

@@ -1,3 +1,3 @@
-ffmpeg
+ffmpeg-python
 watchdog
 filelock
