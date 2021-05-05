@@ -56,6 +56,9 @@ def processClips(clips, game, date):
     move(f'{config.highlights_root}/{game}/combined/{date}.temp.mp4', f'{config.highlights_root}/{game}/combined/{date}.mp4')
     # move clips to process folder
     for clip in clips:
+        # ignore clip if it comes from the combined directory
+        if 'combined/' in clip:
+            continue
         clipFilepath = f'{config.highlights_root}/{game}/{clip}'
         move(clipFilepath, f'{processedFolder}/{clip}')
     print(f'Done processing highlights for date: {date}')
@@ -78,7 +81,7 @@ def checkAndProcess():
         for key in batches.keys():
             # check if a combined highlight already exists and add to our concat list
             combinedHighlight = f'{config.highlights_root}/{game}/combined/{key}.mp4'
-            if os.path.exists(combinedHighlight):
+            if os.path.isfile(combinedHighlight):
                 batches[key].insert(0, f'combined/{key}.mp4')
             print(f'\tprocessing highlights for date: {key}')
             processClips(batches[key], game, key)
