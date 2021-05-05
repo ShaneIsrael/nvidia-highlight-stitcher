@@ -61,7 +61,7 @@ def processClips(clips, game, date):
             continue
         clipFilepath = f'{config.highlights_root}/{game}/{clip}'
         move(clipFilepath, f'{processedFolder}/{clip}')
-    print(f'Done processing highlights for date: {date}')
+    print(f'\tDone processing highlights for date: {date}')
 
 def checkAndProcess():
     for game in getGameDirectories():
