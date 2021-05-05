@@ -1,10 +1,10 @@
 import os
 import re
+import ffmpeg
 import time
 import config
 from lock import lock
 from shutil import copyfile, move
-from moviepy.editor import VideoFileClip, concatenate_videoclips
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
@@ -40,47 +40,74 @@ def setupFolders():
         createDir(f'{config.highlights_root}/{game}/combined')
         createDir(f'{config.highlights_root}/{game}/processed')
 
-def processClip(clip, game):
-    print(f'\tprocessing clip: {clip}...')
-    date = parseDateFromGameClip(clip)
-    combinedFilepath = f'{config.highlights_root}/{game}/combined/{date}.avi'
-    combinedFilepathTemp = f'{config.highlights_root}/{game}/combined/{date}.temp.avi'
-    clipFilepath = f'{config.highlights_root}/{game}/{clip}'
-    processedFolder = f'{config.highlights_root}/{game}/processed'
-    if not date:
-        print(f'\tCould not parse date from clip: {clip}, skipping')
-    else:
-        if not os.path.exists(combinedFilepath):
-            print (f'\tStarting new combined file: {date}.avi')
-            # move clip and title as starting clip
-            copyfile(clipFilepath, combinedFilepath)
-        else:
-            print(f'\tAppending to {date}.avi, this could take a while...')
-            combined = VideoFileClip(combinedFilepath)
-            clipToCombine = VideoFileClip(clipFilepath)
-            combinedClips = concatenate_videoclips([combined, clipToCombine])
-            combinedClips.write_videofile(combinedFilepathTemp, verbose=False, codec='rawvideo')
-            move(combinedFilepathTemp, combinedFilepath)
-        move(clipFilepath, f'{processedFolder}/{clip}')
-        print(f'\tDone processing clip')
+# def processClip(clip, game):
+#     print(f'\tprocessing clip: {clip}...')
+#     date = parseDateFromGameClip(clip)
+#     combinedFilepath = f'{config.highlights_root}/{game}/combined/{date}.avi'
+#     combinedFilepathTemp = f'{config.highlights_root}/{game}/combined/{date}.temp.avi'
+#     clipFilepath = f'{config.highlights_root}/{game}/{clip}'
+#     processedFolder = f'{config.highlights_root}/{game}/processed'
+#     if not date:
+#         print(f'\tCould not parse date from clip: {clip}, skipping')
+#     else:
+#         if not os.path.exists(combinedFilepath):
+#             print (f'\tStarting new combined file: {date}.avi')
+#             # move clip and title as starting clip
+#             copyfile(clipFilepath, combinedFilepath)
+#         else:
+#             print(f'\tAppending to {date}.avi, this could take a while...')
+#             combined = VideoFileClip(combinedFilepath)
+#             clipToCombine = VideoFileClip(clipFilepath)
+#             combinedClips = concatenate_videoclips([combined, clipToCombine])
+#             combinedClips.write_videofile(combinedFilepathTemp, verbose=False, codec='rawvideo')
+#             move(combinedFilepathTemp, combinedFilepath)
+#         move(clipFilepath, f'{processedFolder}/{clip}')
+#         print(f'\tDone processing clip')
 
-def compressAvi(clip, game):
-    print('\tcompressing avi files to mp4')
-    date = parseDateFromGameClip(clip)
-    avi = VideoFileClip(f'{config.highlights_root}/{game}/combined/{clip}')
-    avi.write_videofile(f'{config.highlights_root}/{game}/combined/{date}.mp4', verbose=False, codec='libx264', bitrate='60m')
-    os.remove(f'{config.highlights_root}/{game}/combined/{clip}')
+def processClips(clips, game, date):
+    processedFolder = f'{config.highlights_root}/{game}/processed'
+    concat = []
+    for clip in clips:
+        clipFilepath = f'{config.highlights_root}/{game}/{clip}'
+        clipVideo = ffmpeg.input(clipFilepath)
+        v = clipVideo.video
+        concat.append(v)
+    joined = ffmpeg.concat(concat, v=1, a=1).node
+    out = ffmpeg.output(joined[0], joined[1], f'{config.highlights_root}/{game}/combined/{date}.mp4')
+    out.run()
+    # move clips to process folder
+    for clip in clips:
+        clipFilepath = f'{config.highlights_root}/{game}/{clip}'
+        move(clipFilepath, f'{processedFolder}/{clip}')
+    print(f'Done processing highlights for date: {date}')
+# def compressAvi(clip, game):
+#     print('\tcompressing avi files to mp4')
+#     date = parseDateFromGameClip(clip)
+#     avi = VideoFileClip(f'{config.highlights_root}/{game}/combined/{clip}')
+#     avi.write_videofile(f'{config.highlights_root}/{game}/combined/{date}.mp4', verbose=False, codec='libx264', bitrate='60m')
+#     os.remove(f'{config.highlights_root}/{game}/combined/{clip}')
 
 def checkAndProcess():
     for game in getGameDirectories():
         clips = getGameClips(game)
         print(f'Creating combined highlights for: {game}')
         print(f'\tFound {len(clips)} clip(s) to process...')
+        batches = {}
+
         for clip in clips:
-            processClip(clip, game)
-        avis = getUncompressedHighlights(game)
-        for avi in avis:
-            compressAvi(avi, game)
+            date = parseDateFromGameClip(clip)
+            if not date:
+                continue
+            if not batches[date]:
+                batches[date] = []
+            batches[date].append(clip)
+            
+        for key in batches.keys():
+            print(f'\tprocessing highlights for date: {key}')
+            processClips(batches[key], game, key)
+        # avis = getUncompressedHighlights(game)
+        # for avi in avis:
+        #     compressAvi(avi, game)
 
 
 def onCreated(event):
