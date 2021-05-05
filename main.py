@@ -83,7 +83,7 @@ def checkAndProcess():
             combinedHighlight = f'{config.highlights_root}/{game}/combined/{key}.mp4'
             if os.path.isfile(combinedHighlight):
                 batches[key].insert(0, f'combined/{key}.mp4')
-            print(f'\tprocessing highlights for date: {key}')
+            print(f'\tprocessing highlights for date: {key}, this could take a couple minutes...')
             processClips(batches[key], game, key)
 
 
