@@ -51,8 +51,9 @@ def processClips(clips, game, date):
         concat.append(v)
         concat.append(a)
     joined = ffmpeg.concat(*concat, v=1, a=1).node
-    out = ffmpeg.output(joined[0], joined[1], f'{config.highlights_root}/{game}/combined/{date}.mp4')
+    out = ffmpeg.output(joined[0], joined[1], f'{config.highlights_root}/{game}/combined/{date}.temp.mp4')
     out.run()
+    move(f'{config.highlights_root}/{game}/combined/{date}.temp.mp4', f'{config.highlights_root}/{game}/combined/{date}.mp4')
     # move clips to process folder
     for clip in clips:
         clipFilepath = f'{config.highlights_root}/{game}/{clip}'
