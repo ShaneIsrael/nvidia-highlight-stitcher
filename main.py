@@ -68,7 +68,7 @@ def compressAvi(clip, game):
     print('\tcompressing avi files to mp4')
     date = parseDateFromGameClip(clip)
     avi = VideoFileClip(f'{config.highlights_root}/{game}/combined/{clip}')
-    avi.write_videofile(f'{config.highlights_root}/{game}/combined/{date}.mp4', verbose=False, codec='mpeg4')
+    avi.write_videofile(f'{config.highlights_root}/{game}/combined/{date}.mp4', verbose=False, codec='libx264', bitrate='60m')
     os.remove(f'{config.highlights_root}/{game}/combined/{clip}')
 
 def checkAndProcess():
