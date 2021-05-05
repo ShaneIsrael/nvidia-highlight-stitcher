@@ -75,6 +75,10 @@ def checkAndProcess():
             batches[f'{date}'].append(clip)
             
         for key in batches.keys():
+            # check if a combined highlight already exists and add to our concat list
+            combinedHighlight = f'{config.highlights_root}/{game}/combined/{key}.mp4'
+            if os.path.exists(combinedHighlight):
+                batches[key].insert(0, f'combined/{key}.mp4')
             print(f'\tprocessing highlights for date: {key}')
             processClips(batches[key], game, key)
 
