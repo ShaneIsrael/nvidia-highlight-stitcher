@@ -27,7 +27,7 @@ def getUncompressedHighlights(game):
     return filesnames
 
 def getGameDirectories():
-    return os.listdir(config.highlights_root)
+    return [f for f in os.listdir(config.highlights_root) if os.path.isdir(f'{config.highlights_root}/{f}')]
 
 def createDir(dirpath):
     if not os.path.exists(dirpath):
@@ -45,9 +45,15 @@ def processClips(clips, game, date):
     concat = []
     for clip in clips:
         clipFilepath = f'{config.highlights_root}/{game}/{clip}'
+        probe = ffmpeg.probe(clipFilepath)
+        clipInfo = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+        clipLength = float(clipInfo['duration'])
         clipVideo = ffmpeg.input(clipFilepath)
         v = clipVideo.video
         a = clipVideo.audio
+        if ('combined' not in clip):
+            v = ffmpeg.filter(v, 'fade', type='in', start_time='0', duration=0.5)
+            v = ffmpeg.filter(v, 'fade', type='out', start_time=str(clipLength - 0.5), duration=0.5)
         concat.append(v)
         concat.append(a)
     joined = ffmpeg.concat(*concat, v=1, a=1).node
