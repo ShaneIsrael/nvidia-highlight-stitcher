@@ -63,7 +63,7 @@ def processClips(clips, game, date):
     # move clips to process folder
     for clip in clips:
         # ignore clip if it comes from the combined directory
-        if 'combined/' in clip:
+        if 'combined' in clip:
             continue
         clipFilepath = f'{config.highlights_root}/{game}/{clip}'
         move(clipFilepath, f'{processedFolder}/{clip}')
