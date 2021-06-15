@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import ffmpeg
 import time
 import config
@@ -69,6 +70,36 @@ def processClips(clips, game, date):
         move(clipFilepath, f'{processedFolder}/{clip}')
     print(f'\tDone processing highlights for date: {date}')
 
+def processClipsByFolder(clips, game, folder):
+    processedFolder = f'{config.highlights_root}/{game}/{folder}/processed'
+    createDir(processedFolder)
+    concat = []
+    for clip in clips:
+        clipFilepath = f'{config.highlights_root}/{game}/{folder}/{clip}'
+        probe = ffmpeg.probe(clipFilepath)
+        clipInfo = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+        clipLength = float(clipInfo['duration'])
+        clipVideo = ffmpeg.input(clipFilepath)
+        v = clipVideo.video
+        a = clipVideo.audio
+        if ('combined' not in clip):
+            v = ffmpeg.filter(v, 'fade', type='in', start_time='0', duration=0.5)
+            v = ffmpeg.filter(v, 'fade', type='out', start_time=str(clipLength - 0.5), duration=0.5)
+        concat.append(v)
+        concat.append(a)
+    joined = ffmpeg.concat(*concat, v=1, a=1).node
+    out = ffmpeg.output(joined[0], joined[1], f'{config.highlights_root}/{game}/{folder}/combined.temp.mp4')
+    out.global_args('-loglevel', 'error').run()
+    move(f'{config.highlights_root}/{game}/{folder}/combined.temp.mp4', f'{config.highlights_root}/{game}/{folder}/combined.mp4')
+    # move clips to process folder
+    for clip in clips:
+        # ignore clip if it comes from the combined directory
+        if 'combined' in clip:
+            continue
+        clipFilepath = f'{config.highlights_root}/{game}/{folder}/{clip}'
+        move(clipFilepath, f'{processedFolder}/{clip}')
+    print(f'\tDone processing video for folder: {folder}')
+
 def checkAndProcess():
     for game in getGameDirectories():
         clips = getGameClips(game)
@@ -92,6 +123,22 @@ def checkAndProcess():
             print(f'\tprocessing highlights for date: {key}, this could take a couple minutes...')
             processClips(batches[key], game, key)
 
+def checkAndProcessByFolder(folder):
+    for game in getGameDirectories():
+        if os.path.exists(f'{config.highlights_root}/{game}/{folder}'):
+            clips = getGameClips(f'{game}/{folder}')
+            print(f'Creating video for: {game}/{folder}')
+            print(f'\tFound {len(clips)} clip(s) to process...')
+            batch = []
+            for clip in clips:
+                batch.append(clip)
+            
+            # check if a combined highlight already exists and add to our concat list
+            combinedVideo = f'{config.highlights_root}/{game}/{folder}/combined.mp4'
+            if os.path.isfile(combinedVideo):
+                batch.insert(0, f'{folder}/{folder}.mp4')
+            print(f'\tprocessing video for {game}/{folder}, this could take a couple minutes...')
+            processClipsByFolder(batch, game, folder)
 
 def onCreated(event):
     print('--- New Clip Detected!')
@@ -125,10 +172,16 @@ def initializeObserver():
 
 def main():
     lock()
-    print('Starting Highlight Stitcher')
-    setupFolders()
-    checkAndProcess()
-    print('All existing clips have been processed')
+    args = sys.argv
+    if (len(args) > 1):
+        print(f'Stitching videos in folder: {args[1]}')
+        checkAndProcessByFolder(args[1])
+        print('All existing clips have been processed')
+    else:
+        print('Starting Highlight Stitcher')
+        setupFolders()
+        checkAndProcess()
+        print('All existing clips have been processed')
     # Watching directory may massively drop fps while in game
     #initializeObserver() 
 
