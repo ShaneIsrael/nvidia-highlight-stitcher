@@ -131,7 +131,8 @@ def checkAndProcessByFolder(folder):
             print(f'\tFound {len(clips)} clip(s) to process...')
             batch = []
             for clip in clips:
-                batch.append(clip)
+                if not 'combined' in clip:
+                    batch.append(clip)
             
             # check if a combined highlight already exists and add to our concat list
             combinedVideo = f'{config.highlights_root}/{game}/{folder}/combined.mp4'
