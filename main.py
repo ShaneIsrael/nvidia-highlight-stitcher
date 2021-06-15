@@ -137,7 +137,7 @@ def checkAndProcessByFolder(folder):
             # check if a combined highlight already exists and add to our concat list
             combinedVideo = f'{config.highlights_root}/{game}/{folder}/combined.mp4'
             if os.path.isfile(combinedVideo):
-                batch.insert(0, f'{folder}/{folder}.mp4')
+                batch.insert(0, 'combined.mp4')
             print(f'\tprocessing video for {game}/{folder}, this could take a couple minutes...')
             processClipsByFolder(batch, game, folder)
 
